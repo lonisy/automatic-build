@@ -16,45 +16,43 @@ userName=""
 password=""
 
 function init() {
-    set -- $(getopt -l port:leaderip:leader: "$@")
-    # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加: 。
-    while [ -n "$1" ]; do
-      case "$1" in
-      -u)
-        userName=$2
-        shift
-        ;;
-      -p)
-        password=$2
-        shift
-        ;;
-      --port)
-        port=$2
-        shift
-        ;;
-      --leader)
-        leader=1
-        shift
-        ;;
-      --leaderip)
-        leaderip=$2
-        shift
-        ;;
-      --node)
-        node=$2
-        shift
-        ;;
-      --option)
-        option=$2
-        shift
-        ;;
-      --ui)
-        ui=1
-        shift
-        ;;
-      esac
+  while [ -n "$1" ]; do
+    case "$1" in
+    -u)
+      userName=$2
       shift
-    done
+      ;;
+    -p)
+      password=$2
+      shift
+      ;;
+    --port)
+      port=$2
+      shift
+      ;;
+    --leader)
+      leader=1
+      shift
+      ;;
+    --leaderip)
+      leaderip=$2
+      shift
+      ;;
+    --node)
+      node=$2
+      shift
+      ;;
+    --option)
+      option=$2
+      shift
+      ;;
+    --ui)
+      ui=1
+      shift
+      ;;
+    esac
+    shift
+  done
 }
 
 function usage() {
@@ -70,7 +68,9 @@ shell --leaderip \"\" --node s2
   echo "--ui: ${ui}"
 }
 
+init "$@"
 usage
+#exit 0
 
 download_consul() {
   echo "Download Consul.."
@@ -117,12 +117,32 @@ EOF
 
   systemctl daemon-reload
   systemctl enable consul
+  systemctl start consul
   systemctl status consul
-
 }
 
 show_consul_status() {
   consul members
+}
+
+get_soft_manager() {
+	if [ -f "/usr/bin/yum" ] && [ -d "/etc/yum.repos.d" ]; then
+		PM="yum"
+	elif [ -f "/usr/bin/apt-get" ] && [ -f "/usr/bin/dpkg" ]; then
+		PM="apt-get"
+	fi
+}
+
+init_unzip() {
+
+  if [ ! -f "/usr/bin/unzip" ]; then
+    if [ "${PM}" = "yum" ]; then
+      yum install unzip -y
+    elif [ "${PM}" = "apt-get" ]; then
+      apt-get update
+      apt-get install unzip -y
+    fi
+  fi
 }
 
 main() {
@@ -139,6 +159,8 @@ main() {
     exit 1
   fi
 
+  get_soft_manager
+  init_unzip
   download_consul
   init_config
   install_system_service
